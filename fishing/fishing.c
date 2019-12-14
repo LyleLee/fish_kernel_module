@@ -14,13 +14,13 @@
  * 
  */
 
-static int get_mem(void)
+static char* get_mem(void)
 {
 	int i = 0;
 	int a = 0;
 	int mem_size = 1*1024*1024;
 	char *kernel_mem = NULL;
-	kernel_mem = kmalloc(mem_size , GFP_KERNEL);
+	kernel_mem = (char *)kmalloc(mem_size , GFP_KERNEL);
 
 	if(!kernel_mem)
 	{
@@ -36,21 +36,23 @@ static int get_mem(void)
 	}
 	printk("Address:%p\n",kernel_mem);
 
-	return 0;
+	return kernel_mem;
 }
 
-static int hello_init(void)
+static int __init hello_init(void)
 {
+	char* kernel_mem = NULL;
 	printk(KERN_ALERT "I bear a charmed life.\n");
-
-	get_mem();
+	kernel_mem = get_mem();
+	if(kernel_mem)kfree(kernel_mem);
 
 	return 0;
+
 }
 /*
  * hello_exit—退出函数，当摸块卸栽时被调用
  * */
-static void hello_exit(void)
+static void __exit hello_exit(void)
 {
 	printk(KERN_ALERT "Out, out, brief candle!\n");
 }
@@ -61,5 +63,4 @@ module_exit(hello_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Shakespeare");
 MODULE_DESCRIPTION("A Hello, World Module");
-
 
