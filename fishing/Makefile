@@ -1,6 +1,15 @@
+#check gcc version
+#$(warning $(shell echo "-------------------------"))
+#$(warning "Please check gcc are the same!!")
+#$(warning $(shell cat /proc/version))
+#$(warning $(shell gcc --version))
+#$(warning $(shell echo "-------------------------"))
+
+
 obj-m := fishing.o
 KERNEL_DIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
+
 
 all:
 	make -C $(KERNEL_DIR) M=$(PWD) modules
