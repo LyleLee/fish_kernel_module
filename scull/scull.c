@@ -7,14 +7,18 @@
 #include <linux/types.h>	/*dev_t*/
 #include <linux/kdev_t.h>	/*MAJOR() MINOR()*/
 #include <linux/moduleparam.h>	/*module_param()*/
-#include <linux/fs.h>		/*file_operations*/
+#include <linux/fs.h>		/*file_operations register_chrdev_region() alloc_chrdev_region() unregister_chrdev_region*/
 
+#include "scull.h"
 //module_param(variable, type, perm)
 
+static char scull_name[]="scull";
+static int scull_major = SCULL_MAJOR;
+static int scull_minor = SCULL_MINOR;
+static int scull_minor_count = SCULL_MINOR_COUNT;
 
-static int scull_major = 111;
-static int scull_minor = 222;
-
+static dev_t ascull; 
+//MKDEV(scull_major, scull_minor);		/*只是创建，没有注册到设备当中*/
 
 static loff_t scull_llseek(struct file * f, loff_t pos, int p)
 {
@@ -52,23 +56,44 @@ struct file_operations scull_fops = {
 };
 
 
+
 static int do_actual_work(void)
 {
-	dev_t ascull = MKDEV(scull_major, scull_minor);
-	printk("major:%d, minor:%d\n", MAJOR(ascull), MINOR(ascull));
+	int ret;
+	if (scull_major)
+	{
+		ascull = MKDEV(scull_major, scull_minor);
+		ret = register_chrdev_region(ascull, scull_minor_count, "scull");
+	}
+	else
+	{
+		/*register_chrdev_region用于静态分配设备号*/
+		ret = alloc_chrdev_region(&ascull, MKDEV(0,0), scull_minor_count, "scull"); 
+	
+	}
+	if(ret)
+	{
+		printk(KERN_ALERT "%s: can't regist device number %d\n", scull_name, ret);
+		return -1;
+	}
+	
+	printk("%s: major:%d, minor:%d\n", scull_name,  MAJOR(ascull), MINOR(ascull));
+	
+	
 	return 0;
 }
 
 static int __init initialization_function(void)		/*__init 修饰符表示， 只能在初始化时调用， 不能调用两次*/
 {
-	printk(KERN_ALERT "we are in initialization function \n");
+	printk(KERN_ALERT "%s: we are in initialization function \n",scull_name);
 	do_actual_work();
 	return 0;
 }
 
 static void __exit deinitialization_function(void)
 {
-	printk(KERN_ALERT "deinitialization module exiti\n");
+	printk(KERN_ALERT "%s: deinitialization module exit\n",scull_name);
+	unregister_chrdev_region(ascull, scull_minor_count);
 }
 
 	//module_init 函数是必须调用的
