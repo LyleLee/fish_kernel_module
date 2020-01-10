@@ -8,6 +8,7 @@
 #include <linux/kdev_t.h>	/*MAJOR() MINOR()*/
 #include <linux/moduleparam.h>	/*module_param()*/
 #include <linux/fs.h>		/*file_operations register_chrdev_region() alloc_chrdev_region() unregister_chrdev_region*/
+#include <linux/cdev.h>
 
 #include "scull.h"
 //module_param(variable, type, perm)
@@ -17,7 +18,8 @@ static int scull_major = SCULL_MAJOR;
 static int scull_minor = SCULL_MINOR;
 static int scull_minor_count = SCULL_MINOR_COUNT;
 
-static dev_t ascull; 
+struct cdev *my_cdev = NULL;
+static dev_t ascull; /*设备号*/
 //MKDEV(scull_major, scull_minor);		/*只是创建，没有注册到设备当中*/
 
 static loff_t scull_llseek(struct file * f, loff_t pos, int p)
@@ -55,10 +57,9 @@ struct file_operations scull_fops = {
 	.release = scull_release,
 };
 
-
-
-static int do_actual_work(void)
+static int device_number_init(void)
 {
+
 	int ret;
 	if (scull_major)
 	{
@@ -83,16 +84,39 @@ static int do_actual_work(void)
 	return 0;
 }
 
+static int device_cdev_init(void)
+{
+	my_cdev = cdev_alloc();
+	cdev_init(my_cdev, &scull_fops);	/*添加ops*/
+	my_cdev->owner = THIS_MODULE;	/**/
+	return 0;
+}
+
+static int device_cdev_add_to_kernel(void)
+{
+	int ret;
+	ret = cdev_add(my_cdev, ascull, 1);
+
+	if(ret)
+	{
+		cdev_del(my_cdev);
+	}
+	return 0;
+}
+
 static int __init initialization_function(void)		/*__init 修饰符表示， 只能在初始化时调用， 不能调用两次*/
 {
 	printk(KERN_ALERT "%s: we are in initialization function \n",scull_name);
-	do_actual_work();
+	device_number_init();
+	device_cdev_init();
+	device_cdev_add_to_kernel();		
 	return 0;
 }
 
 static void __exit deinitialization_function(void)
 {
 	printk(KERN_ALERT "%s: deinitialization module exit\n",scull_name);
+	if(my_cdev)cdev_del(my_cdev);
 	unregister_chrdev_region(ascull, scull_minor_count);
 }
 
