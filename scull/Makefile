@@ -16,3 +16,6 @@ all:
 clean:
 	make -C $(KERNEL_DIR) M=$(PWD) clean
 .PHONY:clean
+
+user:
+	gcc user_scull_program.c -o user_scull_program.o
